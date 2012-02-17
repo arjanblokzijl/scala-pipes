@@ -1,6 +1,7 @@
 package pipes
 
-import scalaz.Monad
+import scalaz.{MonadTrans, Monad}
+
 
 /**
  * User: arjan
@@ -21,8 +22,8 @@ sealed trait Pipe[A, B, F[_], R] {
 case class Pure[A, B, F[_], R](r: R) extends Pipe[A, B, F, R] {
   def flatMap[S](f: (R) => Pipe[A, B, F, S])(implicit F: Monad[F]) = f(r)
 }
-case class M[A, B, F[_], R](value: F[Pipe[A, B, F, R]]) extends Pipe[A, B, F, R] {
-  def flatMap[S](f: (R) => Pipe[A, B, F, S])(implicit F: Monad[F]) = M(F.map(value)(pi => pi flatMap f))
+case class MO[A, B, F[_], R](value: F[Pipe[A, B, F, R]]) extends Pipe[A, B, F, R] {
+  def flatMap[S](f: (R) => Pipe[A, B, F, S])(implicit F: Monad[F]) = MO(F.map(value)(pi => pi flatMap f))
 }
 case class Await[A, B, F[_], R](fc: A => Pipe[A, B, F, R]) extends Pipe[A, B, F, R] {
   def flatMap[S](f: (R) => Pipe[A, B, F, S])(implicit F: Monad[F]) = Await(a => fc(a) flatMap f)
@@ -36,6 +37,11 @@ trait PipeFunctions {
     def bind[A, B](fa: Pipe[I, O, F, A])(f: (A) => Pipe[I, O, F, B]): Pipe[I, O, F, B] = fa flatMap f
 
     def point[A](a: => A) = Pure(a)
+  }
+
+  implicit def pipeMonadTrans[I, O]: MonadTrans[({type l[a[_], b] = Pipe[I, O, a, b]})#l] = new MonadTrans[({type l[a[_], b] = Pipe[I, O, a, b]})#l] {
+    implicit def apply[M[_]](implicit M0: Monad[M]): Monad[({type l[a] = Pipe[I, O, M, a]})#l] = pipeMonad[I, O, M]
+    def liftM[G[_], A](ga: G[A])(implicit M: Monad[G]): Pipe[I, O, G, A] = MO(M.map(ga)(a => pipeMonad[I, O, G].point(a)))
   }
 
 }
