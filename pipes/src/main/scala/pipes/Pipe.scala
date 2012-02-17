@@ -6,20 +6,15 @@ import scalaz.Monad
  * User: arjan
  */
 
-//data Pipe a b m r =
-//    Pure r                     -- pure = Pure
-//  | M     (m   (Pipe a b m r)) -- Monad
-//  | Await (a -> Pipe a b m r ) -- ((->) a) Functor
-//  | Yield (b,   Pipe a b m r ) -- ((,)  b) Functor
-
-//instance (Monad m) => Functor (Pipe a b m) where
-//    fmap f c = case c of
-//        Pure r   -> Pure $ f r
-//        M mc     -> M     $ liftM (fmap f) mc
-//        Await fc -> Await $ fmap  (fmap f) fc
-//        Yield fc -> Yield $ fmap  (fmap f) fc
-
+/**
+ *
+ * @tparam A The type of input received from upstream pipes
+ * @tparam B The type of output delivered to downstream pipes
+ * @tparam F The base monad
+ * @tparam R The type of the monad's final result
+ */
 sealed trait Pipe[A, B, F[_], R] {
+  //define like this to avoid 'type constructor inapplicable to none' compiler errors. This is fixed in scala 2.10
   def map[S](f: (R) => S)(implicit F: Monad[F]): Pipe[A, B, F, S]
   def flatMap[S](f: (R) => Pipe[A, B, F, S])(implicit F: Monad[F]): Pipe[A, B, F, S]
 }
@@ -42,14 +37,6 @@ case class Yield[A, B, F[_], R](b: B, p: Pipe[A, B, F, R]) extends Pipe[A, B, F,
 }
 
 trait PipeFunctions {
-//  instance (Monad m) => Monad (Pipe a b m) where
-//      return = pure
-//      m >>= f = case m of
-//          Pure r   -> f r
-//          M mc     -> M     $ liftM (>>= f) mc
-//          Await fc -> Await $ fmap  (>>= f) fc
-//          Yield fc -> Yield $ fmap  (>>= f) fc
-
   implicit def pipeMonad[I, O, F[_]](implicit F0: Monad[F]): Monad[({type l[r] = Pipe[I, O, F, r]})#l] = new Monad[({type l[r] = Pipe[I, O, F, r]})#l] {
     def bind[A, B](fa: Pipe[I, O, F, A])(f: (A) => Pipe[I, O, F, B]): Pipe[I, O, F, B] = fa flatMap f
 
