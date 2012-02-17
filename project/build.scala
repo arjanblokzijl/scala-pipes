@@ -2,18 +2,18 @@ import sbt._
 import Keys._
 
 
-object ScalaConduitsBuild extends Build {
+object ScalaPipesBuild extends Build {
 
   lazy val root = Project(
     id = "scala-pipes",
     base = file("."),
     settings = standardSettings,
-    aggregate = Seq(conduits, examples)
+    aggregate = Seq(pipes, examples)
   )
 
   lazy val pipes = Project(
     id = "pipes",
-    base = file("conduits"),
+    base = file("pipes"),
     settings = standardSettings ++ Seq(
       libraryDependencies ++= Seq(Dependencies.scalaz, Dependencies.scalazEffect, Dependencies.ScalaCheck, Dependencies.Specs)
     )
@@ -22,7 +22,7 @@ object ScalaConduitsBuild extends Build {
   lazy val examples = Project(
     id = "pipes-examples",
     base = file("examples"),
-    dependencies = Seq[ClasspathDep[ProjectReference]](conduits),
+    dependencies = Seq[ClasspathDep[ProjectReference]](pipes),
     settings = standardSettings
   )
 
