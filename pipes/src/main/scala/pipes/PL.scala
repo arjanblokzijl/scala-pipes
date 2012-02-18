@@ -3,6 +3,8 @@ package pipes
 
 import pipes._
 import scalaz._
+
+import effect.IO
 import std.stream._
 import collection.immutable.Stream
 
@@ -12,40 +14,34 @@ import collection.immutable.Stream
 
 object PL {
 
-
-  //TODO should be generalized
-  def take[A, F[_]](n: Int)(implicit M: Monad[F]): Pipe[A, A, Stream, Unit] = {
-    type Res = Pipe[A, A, Stream, Unit]
-    val pm = pipeMonad[A, A, Stream].bind(await)(x => yieldp(x))
-    replicate[A, A, Stream, Unit](n, pm)
+//  > printer :: (Show a) => Pipe a Zero IO b
+//  > printer = forever $ do
+//  >     x <- await
+//  >     lift $ print x
+  def printer[F[_], A](implicit M: Monad[F]): Pipe[A, Zero, IO, Unit] = {
+    pipeMonad[A, Zero, IO].bind(await)((x: A) => pipeMonadTrans[A, Zero].liftM(IO.putStrLn(x.toString)))
   }
 
-  def fromList[B, F[_]](l: Stream[B])(implicit M: Monad[F]): Pipe[Zero, B, Stream, Unit] = {
-    val lm = l map(x => yieldp[Zero, B, Stream](x))
-    seqp[Zero, B, Stream](lm)
+
+  def take[A, F[_]](n: Int)(implicit M: Monad[F]): Pipe[A, A, F, Unit] = {
+    type Res = Pipe[A, A, F, Unit]
+    val pm = pipeMonad[A, A, F].bind(await)(x => yieldp(x))
+    replicate[A, A, F, Unit](n, pm)
   }
 
-  def replicate[A, B, F[_], R](n: Int, pm: Pipe[A, B, Stream, Unit])(implicit M: Monad[F]): Pipe[A, B, Stream, Unit] = {
-    type Res = Pipe[A, B, Stream, Unit]
-    Monoid.replicate[Stream, Res](pm)(n).foldLeft[Res](Pure(()))((b, fa) => pipeMonad[A, B, Stream].bind(fa)(_ => Pure(b)))
+  def fromList[A, F[_]](l: Stream[A])(implicit M: Monad[F]): Pipe[Zero, A, F, Unit] = {
+    val lm = l map(x => yieldp[Zero, A, F](x))
+    seqp[Zero, A, F](lm)
   }
 
-  def seqp[A, B, F[_]](str: Stream[Pipe[A, B, Stream, Unit]])(implicit M: Monad[F]): Pipe[A, B, Stream, Unit] = {
-    type Res = Pipe[A, B, Stream, Unit]
-    str.foldLeft[Res](Pure(()))((b, fa) => pipeMonad[A, B, Stream].bind(fa)(_ => Pure(b)))
+  def replicate[A, B, F[_], R](n: Int, pm: Pipe[A, B, F, Unit])(implicit M: Monad[F]): Pipe[A, B, F, Unit] = {
+    type Res = Pipe[A, B, F, Unit]
+    Monoid.replicate[Stream, Res](pm)(n).foldLeft[Res](Pure(()))((b, fa) => pipeMonad[A, B, F].bind(fa)(_ => Pure(b)))
   }
 
-//  -- | @'mapM_' f@ is equivalent to @'sequence_' . 'map' f@.
-//  mapM_           :: Monad m => (a -> m b) -> [a] -> m ()
-//  {-# INLINE mapM_ #-}
-//  mapM_ f as      =  sequence_ (map f as)
+  def seqp[A, B, F[_]](str: Stream[Pipe[A, B, F, Unit]])(implicit M: Monad[F]): Pipe[A, B, F, Unit] = {
+    type Res = Pipe[A, B, F, Unit]
+    str.foldLeft[Res](Pure(()))((b, fa) => pipeMonad[A, B, F].bind(fa)(_ => Pure(b)))
+  }
 
-//  def replicateM_[F[_], A](n: Int)(fa: F[A])(implicit M: Monad[F]): F[Unit] = {
-//    val r = Monoid.replicate[Stream, F[A]](fa)(n)
-//    sequence_(r)
-//  }
-//
-//  def sequence_[F[_], A](ms: Stream[F[A]])(implicit M: Monad[F]): F[Unit] = {
-//    ms.foldLeft(M.point(()))((b, fa) => M.bind(fa)(_ => M.point(b)))
-//  }
 }
