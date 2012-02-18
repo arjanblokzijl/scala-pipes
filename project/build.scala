@@ -31,7 +31,7 @@ object ScalaPipesBuild extends Build {
     version := "0.1-SNAPSHOT",
     scalaVersion := "2.9.1",
 //    scalaVersion := "2.10.0-M1",
-    scalacOptions  ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-Ydependent-method-types"),
+    scalacOptions  ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-Ydependent-method-types", "-Xlog-implicits"),
     resolvers += ScalaToolsSnapshots
   )
 
