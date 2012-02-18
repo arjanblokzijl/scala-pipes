@@ -18,4 +18,9 @@ object PipeExamples extends App {
 
   println("id: " + id)
 
+  val fromList = PL.fromList[Int, Id](Stream(1,2,3,4,5,6))
+
+  println("fromList " + fromList)
+
+  //TODO runPipe, obviously
 }

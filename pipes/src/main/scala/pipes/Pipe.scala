@@ -80,6 +80,7 @@ case class Strict[F[_], R, A, B](unStrict: Pipe[A, B, F, R])
 
 trait PipeFunctions {
   sealed trait Zero
+  object Zero extends Zero
 
   type Producer[B, F[_], R ] = Pipe[Zero, B, F, R]
   type Pipeline[F[_], R] = Pipe[Zero, Zero, F, R]
@@ -118,7 +119,21 @@ trait PipeFunctions {
 
   def idP[A, F[_], R](implicit M: Monad[F]): Pipe[A, A, F, R] = pipe(identity)
 
+//  runPipe :: (Monad m) => Pipeline m r -> m r
+//  runPipe p' = case p' of
+//      Pure r          -> return r
+//      M mp            -> mp >>= runPipe
+//      -- Technically a blocked Pipe can still await
+//      Await f         -> runPipe $ f Zero
+//      -- A blocked Pipe can not yield, but I include this as a precaution
+//      Yield (_, p) -> runPipe p
 
+  def runPipe[F[_], R](pl: Pipeline[F, R])(implicit M: Monad[F]): F[R] = pl match {
+    case Pure(r) => M.point(r)
+    case MO(mp) => M.bind(mp)(runPipe(_))
+    case Await(f) => runPipe(f(Zero))
+    case Yield(_, p) => runPipe(p)
+  }
 }
 
 object pipes extends PipeFunctions with PipeInstances
