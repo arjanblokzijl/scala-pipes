@@ -22,8 +22,8 @@ sealed trait Pipe[A, B, F[_], R] {
 //  (<+<), (<-<) :: (Monad m) => Pipe b c m r -> Pipe a b m r -> Pipe a c m r
 //  p1 <+< p2 = unLazy   (Lazy   p1 <<< Lazy   p2)
 //  p1 <-< p2 = unStrict (Strict p1 <<< Strict p2)
-   def <+<[C](p2: Pipe[C, A, F, R])(implicit M: Monad[F]): Pipe[C, B, F, R] =
-      (Lazy(this) compose Lazy(p2)).unLazy
+   def <+<[C](that: Pipe[C, A, F, R])(implicit M: Monad[F]): Pipe[C, B, F, R] =
+      (Lazy(this) compose Lazy(that)) unLazy
 
 }
 

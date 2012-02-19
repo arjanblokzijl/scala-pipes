@@ -14,14 +14,9 @@ import collection.immutable.Stream
 
 object PL {
 
-//  > printer :: (Show a) => Pipe a Zero IO b
-//  > printer = forever $ do
-//  >     x <- await
-//  >     lift $ print x
-  def printer[F[_], A](implicit M: Monad[F]): Pipe[A, Zero, IO, Unit] = {
-    pipeMonad[A, Zero, IO].bind(await)((x: A) => pipeMonadTrans[A, Zero].liftM(IO.putStrLn(x.toString)))
-  }
-
+  def printer[F[_], A](implicit M: Monad[F]): Pipe[A, Zero, IO, Unit] =
+    forever(pipeMonad[A, Zero, IO].bind(await)((x: A) =>
+       pipeMonadTrans[A, Zero].liftM(IO.putStrLn(x.toString))))
 
   def take[A, F[_]](n: Int)(implicit M: Monad[F]): Pipe[A, A, F, Unit] = {
     type Res = Pipe[A, A, F, Unit]
@@ -29,19 +24,16 @@ object PL {
     replicate[A, A, F, Unit](n, pm)
   }
 
-  def fromList[A, F[_]](l: Stream[A])(implicit M: Monad[F]): Pipe[Zero, A, F, Unit] = {
-    val lm = l map(x => yieldp[Zero, A, F](x))
-    seqp[Zero, A, F](lm)
-  }
+  def fromList[A, F[_]](l: => Stream[A])(implicit M: Monad[F]): Pipe[Zero, A, F, Unit] =
+    seqp[Zero, A, F](l map(yieldp[Zero, A, F]))
 
   def replicate[A, B, F[_], R](n: Int, pm: Pipe[A, B, F, Unit])(implicit M: Monad[F]): Pipe[A, B, F, Unit] = {
     type Res = Pipe[A, B, F, Unit]
-    Monoid.replicate[Stream, Res](pm)(n).foldLeft[Res](Pure(()))((b, fa) => pipeMonad[A, B, F].bind(fa)(_ => Pure(b)))
+    Monoid.replicate[Stream, Res](pm)(n).foldLeft[Res](Pure(()))((b, fa) => fa flatMap(_ => b))
   }
 
-  def seqp[A, B, F[_]](str: Stream[Pipe[A, B, F, Unit]])(implicit M: Monad[F]): Pipe[A, B, F, Unit] = {
-    type Res = Pipe[A, B, F, Unit]
-    str.foldLeft[Res](Pure(()))((b, fa) => pipeMonad[A, B, F].bind(fa)(_ => Pure(b)))
-  }
+
+  def seqp[A, B, F[_]](str: => Stream[Pipe[A, B, F, Unit]])(implicit M: Monad[F]): Pipe[A, B, F, Unit] =
+    str.foldLeft[Pipe[A, B, F, Unit]](Pure(()))((b, fa) => fa.flatMap(_ => b))
 
 }

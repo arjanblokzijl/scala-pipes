@@ -15,10 +15,10 @@ import scalaz.effect.IO
 object PipeExamples extends App {
 
   val take = PL.take[Int, IO](5)
+  val fromList = PL.fromList[Int, IO]((1 to 10).toStream)
 
-//  val id = idP[Int, Id, Unit]
-  val printer = PL.printer[Stream, Int] <+< take <+< PL.fromList(Stream(1,2,3,4,5,6))
-  val run = runPipe(printer)
+  val printer: Pipe[Zero, Zero, IO, Unit] = PL.printer[Stream, Int] <+< take <+< fromList
+  val run: IO[Unit] = runPipe(printer)
 
-  println("printer " + run)
+  println(run.unsafePerformIO)
 }
