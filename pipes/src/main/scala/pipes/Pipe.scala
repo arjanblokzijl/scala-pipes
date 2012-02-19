@@ -19,12 +19,11 @@ sealed trait Pipe[A, B, F[_], R] {
   def map[S](f: (R) => S)(implicit F: Monad[F]): Pipe[A, B, F, S] = flatMap(a => Pure(f(a)))
   def flatMap[S](f: (R) => Pipe[A, B, F, S])(implicit F: Monad[F]): Pipe[A, B, F, S]
 
-//  (<+<), (<-<) :: (Monad m) => Pipe b c m r -> Pipe a b m r -> Pipe a c m r
-//  p1 <+< p2 = unLazy   (Lazy   p1 <<< Lazy   p2)
-//  p1 <-< p2 = unStrict (Strict p1 <<< Strict p2)
-   def <+<[C](that: Pipe[C, A, F, R])(implicit M: Monad[F]): Pipe[C, B, F, R] =
+   def >+>[C](that: Pipe[C, A, F, R])(implicit M: Monad[F]): Pipe[C, B, F, R] =
       (Lazy(this) compose Lazy(that)) unLazy
 
+   def <+<[C](that: Pipe[B, C, F, R])(implicit M: Monad[F]): Pipe[A, C, F, R] =
+      (Lazy(that) compose Lazy(this)) unLazy
 }
 
 case class Pure[A, B, F[_], R](r: R) extends Pipe[A, B, F, R] {
@@ -53,23 +52,18 @@ trait PipeInstances {
     implicit def apply[M[_]](implicit M0: Monad[M]): Monad[({type l[a] = Pipe[I, O, M, a]})#l] = pipeMonad[I, O, M]
     def liftM[G[_], A](ga: G[A])(implicit M: Monad[G]): Pipe[I, O, G, A] = MO(M.map(ga)(a => pipeMonad[I, O, G].point(a)))
   }
-
-  implicit def pipeCategory[F[_], R](implicit M: Monad[F]): Category[({type l[a, b] = Lazy[F, R, a, b]})#l] = new Category[({type l[a, b] = Lazy[F, R, a, b]})#l] {
-    def compose[A, B, C](f: Lazy[F, R, B, C], g: Lazy[F, R, A, B]): Lazy[F, R, A, C] = f compose g
-    def id[A]: Lazy[F, R, A, A] = Lazy(pipes.idP)
-  }
 }
 
 import pipes._
 case class Lazy[F[_], R, A, B](unLazy: Pipe[A, B, F, R]) {
   def compose[C](that: Lazy[F, R, C, A])(implicit M: Monad[F]): Lazy[F, R, C, B] = {
     val p: Pipe[C, B, F, R] = (this.unLazy, that.unLazy) match {
-      case (Yield(x1, p1), p2) => yieldp(x1) flatMap (_ => p1 <+< p2)
-      case (MO(m1), p2) => pipeMonadTrans.liftM(m1) flatMap (p1 => p1 <+< p2)
+      case (Yield(x1, p1), p2) => yieldp(x1) flatMap (_ => p1 >+> p2)
+      case (MO(m1), p2) => pipeMonadTrans.liftM(m1) flatMap (p1 => p1 >+> p2)
       case (Pure(r1), _) => Pure(r1)
-      case (Await(f1), Yield(x2, p2)) => f1(x2) <+< p2
-      case (p1, Await(f2)) => await[C, B, F] flatMap (x => p1 <+< f2(x))
-      case (p1, MO(m2)) => pipeMonadTrans.liftM(m2) flatMap (p2 => p1 <+< p2)
+      case (Await(f1), Yield(x2, p2)) => f1(x2) >+> p2
+      case (p1, Await(f2)) => await[C, B, F] flatMap (x => p1 >+> f2(x))
+      case (p1, MO(m2)) => pipeMonadTrans.liftM(m2) flatMap (p2 => p1 >+> p2)
       case (_, Pure(r2)) => Pure(r2)
     }
     Lazy(p)
