@@ -27,7 +27,7 @@ object PL {
     seqp[Zero, A, F](l map yieldp[Zero, A, F])
 
   def replicate[A, B, F[_], R](n: Int, pm: Pipe[A, B, F, Unit])(implicit M: Monad[F]): Pipe[A, B, F, Unit] =
-    seqp(Monoid.replicate[List, Pipe[A, B, F, Unit]](pm)(n))
+    seqp(Monoid.replicate[Stream, Pipe[A, B, F, Unit]](pm)(n))
 
   //TODO this is strict, blows up on infinite streams
   def seqp[A, B, F[_]](str: Seq[Pipe[A, B, F, Unit]])(implicit M: Monad[F]): Pipe[A, B, F, Unit] =

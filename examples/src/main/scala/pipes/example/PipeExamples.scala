@@ -1,13 +1,10 @@
 package pipes
 package example
 
-import scalaz.Id
-
 import pipes._
 import collection.immutable.Stream
-import scalaz.std.stream._
-import scalaz.std.option._
 import scalaz.effect.IO
+import scalaz.std.stream._
 
 /**
  * User: arjan
@@ -15,11 +12,12 @@ import scalaz.effect.IO
 
 object PipeExamples extends App {
 
-  val take = PL.take[Zero, IO](10000)
-  val fromList = PL.fromList[Int, IO](Stream.from(1).take(10000))
+  val take = PL.take[Int, IO](5)
+  val fromList = PL.fromList[Int, IO](Stream.from(1).take(100000))
 
-  val printer: Pipe[Zero, Zero, IO, Unit] = PL.printer[Stream, Int] >+> fromList >+> take
-  val run: IO[Unit] = runPipe(printer)
+  val printer2: Pipe[Zero, Zero, IO, Unit] = PL.printer[Stream, Int] >+> take >+> fromList
+  val run2: IO[Unit] = runPipe(printer2)
 
-  println(run.unsafePerformIO)
+  println(run2.unsafePerformIO)
 }
+
