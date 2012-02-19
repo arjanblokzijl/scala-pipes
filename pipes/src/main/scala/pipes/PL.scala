@@ -6,6 +6,7 @@ import scalaz._
 
 import effect.IO
 import std.stream._
+import std.list._
 import std.stream.streamSyntax._
 import collection.immutable.Stream
 
@@ -22,16 +23,13 @@ object PL {
   def take[A, F[_]](n: Int)(implicit M: Monad[F]): Pipe[A, A, F, Unit] =
     replicate[A, A, F, Unit](n, await[A, A, F] flatMap (x => yieldp(x)))
 
-  def fromList[A, F[_]](l: => Stream[A])(implicit M: Monad[F]): Pipe[Zero, A, F, Unit] =
+  def fromList[A, F[_]](l: Seq[A])(implicit M: Monad[F]): Pipe[Zero, A, F, Unit] =
     seqp[Zero, A, F](l map yieldp[Zero, A, F])
 
   def replicate[A, B, F[_], R](n: Int, pm: Pipe[A, B, F, Unit])(implicit M: Monad[F]): Pipe[A, B, F, Unit] =
-    seqp(Monoid.replicate[Stream, Pipe[A, B, F, Unit]](pm)(n))
+    seqp(Monoid.replicate[List, Pipe[A, B, F, Unit]](pm)(n))
 
-
-
-  //streamInstance.foldR[Pipe[A, B, F, Unit], Pipe[A, B, F, Unit]](str, Pure(()))(fa => b => (fa.flatMap(_ => b))) //gives stackoverflow pretty quickly
-  def seqp[A, B, F[_]](str: Stream[Pipe[A, B, F, Unit]])(implicit M: Monad[F]): Pipe[A, B, F, Unit] =
+  def seqp[A, B, F[_]](str: Seq[Pipe[A, B, F, Unit]])(implicit M: Monad[F]): Pipe[A, B, F, Unit] =
     //TODO this is strict, blows up on infinite streams
     str.foldLeft[Pipe[A, B, F, Unit]](Pure(()))((b, fa) => b flatMap(_ => fa))
 }

@@ -276,4 +276,4 @@ printer = forever $ do
 
 
 pipeline :: Pipeline IO ()
-pipeline = printer <+< take' 3 <+< fromList [1..]
+pipeline = printer <+< take' 10000 <+< fromList [1..]
