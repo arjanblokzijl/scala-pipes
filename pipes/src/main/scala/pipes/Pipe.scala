@@ -52,6 +52,11 @@ trait PipeInstances {
     implicit def apply[M[_]](implicit M0: Monad[M]): Monad[({type l[a] = Pipe[I, O, M, a]})#l] = pipeMonad[I, O, M]
     def liftM[G[_], A](ga: G[A])(implicit M: Monad[G]): Pipe[I, O, G, A] = MO(M.map(ga)(a => pipeMonad[I, O, G].point(a)))
   }
+
+  implicit def pipeCategory[F[_], R](implicit M: Monad[F]): Category[({type l[a, b] = Lazy[F, R, a, b]})#l] = new Category[({type l[a, b] = Lazy[F, R, a, b]})#l] {
+    def compose[A, B, C](f: Lazy[F, R, B, C], g: Lazy[F, R, A, B]): Lazy[F, R, A, C] = f compose g
+    def id[A]: Lazy[F, R, A, A] = Lazy(pipes.idP)
+  }
 }
 
 import pipes._
