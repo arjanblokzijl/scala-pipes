@@ -6,6 +6,7 @@ import scalaz.Id
 import pipes._
 import collection.immutable.Stream
 import scalaz.std.stream._
+import scalaz.std.option._
 import scalaz.effect.IO
 
 /**
@@ -14,8 +15,8 @@ import scalaz.effect.IO
 
 object PipeExamples extends App {
 
-  val take = PL.take[Int, IO](5)
-  val fromList = PL.fromList[Int, IO]((1 to 10).toStream)
+  val take = PL.take[Int, IO](10)
+  val fromList = PL.fromList[Int, IO](Stream.from(1).take(20))
 
   val printer: Pipe[Zero, Zero, IO, Unit] = PL.printer[Stream, Int] <+< take <+< fromList
   val run: IO[Unit] = runPipe(printer)

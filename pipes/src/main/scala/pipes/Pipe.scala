@@ -109,24 +109,15 @@ trait PipeFunctions {
   def pipe[A, B, F[_], R](f: A => B)(implicit M: Monad[F]): Pipe[A, B, F, R] =
     forever(await flatMap(x => yieldp(f(x))))
 
-  def discard[A, B, F[_], R](implicit M: Monad[F]): Pipe[A, B, F, R] =
-    forever(await)
+  def discard[A, B, F[_], R](implicit M: Monad[F]): Pipe[A, B, F, R] = forever(await)
 
   //TODO looks like stack blowing version of forever, specialized to pipes for the moment.
   // Apart from this, all the type annotations are not that great, so generalize
   def forever[A, B, F[_], R, S](fa: Pipe[A, B, F, R])(implicit M: Monad[F]): Pipe[A, B, F, S] =
     fa flatMap(_ => forever(fa))
 
-  def idP[A, F[_], R](implicit M: Monad[F]): Pipe[A, A, F, R] = pipe(identity)
 
-//  runPipe :: (Monad m) => Pipeline m r -> m r
-//  runPipe p' = case p' of
-//      Pure r          -> return r
-//      M mp            -> mp >>= runPipe
-//      -- Technically a blocked Pipe can still await
-//      Await f         -> runPipe $ f Zero
-//      -- A blocked Pipe can not yield, but I include this as a precaution
-//      Yield (_, p) -> runPipe p
+  def idP[A, F[_], R](implicit M: Monad[F]): Pipe[A, A, F, R] = pipe(identity)
 
   def runPipe[F[_], R](pl: Pipeline[F, R])(implicit M: Monad[F]): F[R] = pl match {
     case Pure(r) => M.point(r)
