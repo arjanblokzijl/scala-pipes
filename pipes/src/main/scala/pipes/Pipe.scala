@@ -1,11 +1,7 @@
 package pipes
 
-import scalaz.{Category, MonadTrans, Monad}
-
-
-/**
- * User: arjan
- */
+import scalaz._
+import pipes._
 
 /**
  *
@@ -38,10 +34,7 @@ case class Await[A, B, F[_], R](fc: A => Pipe[A, B, F, R]) extends Pipe[A, B, F,
 case class Yield[A, B, F[_], R](b: B, p: Pipe[A, B, F, R]) extends Pipe[A, B, F, R] {
   def flatMap[S](f: (R) => Pipe[A, B, F, S])(implicit F: Monad[F]) = Yield(b, p flatMap f)
 }
-
-
 trait PipeInstances {
-
   implicit def pipeMonad[I, O, F[_]](implicit F0: Monad[F]): Monad[({type l[r] = Pipe[I, O, F, r]})#l] = new Monad[({type l[r] = Pipe[I, O, F, r]})#l] {
     def bind[A, B](fa: Pipe[I, O, F, A])(f: (A) => Pipe[I, O, F, B]): Pipe[I, O, F, B] = fa flatMap f
 
@@ -59,7 +52,7 @@ trait PipeInstances {
   }
 }
 
-import pipes._
+
 case class Lazy[F[_], R, A, B](unLazy: Pipe[A, B, F, R]) {
   def compose[C](that: Lazy[F, R, C, A])(implicit M: Monad[F]): Lazy[F, R, C, B] = {
     val p: Pipe[C, B, F, R] = (this.unLazy, that.unLazy) match {

@@ -3,6 +3,7 @@
 target
 project/boot
 *.swp
+*.*prof
 project.vim
 tags
 .lib
