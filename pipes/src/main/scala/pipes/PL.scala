@@ -5,23 +5,25 @@ import pipes._
 import scalaz._
 
 import effect.IO
-import std.stream._
 import std.list._
-import std.stream.streamSyntax._
-import collection.immutable.Stream
-import scalaz.Free._
+import collection.Seq
+
+import Pipe._
 /**
  * User: arjan
  */
 
 object PL {
 
-  def printer[F[_], A](implicit M: Monad[F]): Pipe[A, Zero, IO, Unit] =
-    forever(pipeMonad[A, Zero, IO].bind(pipes.await)((x: A) =>
-      pipeMonadTrans[A, Zero].liftM(IO.putStrLn(x.toString))))
+  def printer[F[_], A](implicit M: Monad[F]): Pipe[A, Zero, IO, Unit] = {
+    import Free._
+    import std.function._
+    val await: Pipe[A, Zero, IO, A] = pipes.await
+    val print: Free.Trampoline[Pipe[A, Zero, IO, Unit]] = await flatMapT((x: A) => return_(pipeMonadTrans[A, Zero].liftM(IO.putStrLn(x.toString))))
+    forever(print.run)
+  }
 
   def take[A, F[_]](n: Int)(implicit M: Monad[F]): Pipe[A, A, F, Unit] = {
-//    replicate[A, A, F, Unit](n, pipes.await[A, A, F] flatMap (x => yieldp[A, A, F](x)))
     val dl = DList.replicate(n, pipes.await[A, A, F] flatMap (x => yieldp[A, A, F](x)))
     dl.foldr[Pipe[A, A, F, Unit]](Pure())((a, b) => b flatMap(_ => a))
   }

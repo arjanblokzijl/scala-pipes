@@ -27,11 +27,14 @@ object ScalaPipesBuild extends Build {
   )
 
   lazy val standardSettings = Defaults.defaultSettings ++ Seq(
+    autoCompilerPlugins := true,
     organization := "ulysses",
     version := "0.1-SNAPSHOT",
     scalaVersion := "2.9.1",
 //    scalaVersion := "2.10.0-M1",
-    scalacOptions  ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-Ydependent-method-types", "-Xlog-implicits"),
+//    scalacOptions  ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-Ydependent-method-types", "-Xlog-implicits"),
+    addCompilerPlugin("org.scala-lang.plugins" % "continuations" % "2.9.1"),
+    scalacOptions  ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-Xlog-implicits", "-P:continuations:enable"),
     resolvers += ScalaToolsSnapshots
   )
 

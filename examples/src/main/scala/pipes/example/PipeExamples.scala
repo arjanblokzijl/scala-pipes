@@ -12,14 +12,14 @@ import scalaz.std.stream._
 
 object PipeExamples extends App {
 
-  val list = Stream.from(1).take(10000).toList
+  val list = Stream.from(1).take(100000).toList
   val start = System.currentTimeMillis()
   val fromList = PL.fromList[Int, IO](list)
   val endFromList = System.currentTimeMillis()
   println("fromList: it took %s millisseconds" format (endFromList - start))
 //  println("fromList %s" format fromList)
 //
-  val take = PL.take[Int, IO](1000)
+  val take = PL.take[Int, IO](10000)
   val endTake = System.currentTimeMillis()
 //  println("take %s" format take)
   println("take: it took %s milliseconds" format (endTake - endFromList))
