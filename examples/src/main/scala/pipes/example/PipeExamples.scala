@@ -12,24 +12,24 @@ import scalaz.std.stream._
 
 object PipeExamples extends App {
 
-  val list = Stream.from(1).take(100000).toList
-  val start = System.currentTimeMillis()
-  val fromList = PL.fromList[Int, IO](list)
-  val endFromList = System.currentTimeMillis()
-  println("fromList: it took %s millisseconds" format (endFromList - start))
-//  println("fromList %s" format fromList)
-//
-  val take = PL.take[Int, IO](10000)
-  val endTake = System.currentTimeMillis()
-//  println("take %s" format take)
-  println("take: it took %s milliseconds" format (endTake - endFromList))
+  val str = Stream.from(1)
 
-  val takeFromList = take >+> fromList
-  val endTakeFromList = System.currentTimeMillis()
+  val producer = PL.fromStream[Int, IO](str)
 
-  println("takeFromList: it took %s milliseconds" format (endTakeFromList - endTake))
-  val printer: Pipe[Zero, Zero, IO, Unit] = fromList <+< take <+< PL.printer[Stream, Int]
+  val smallTake = PL.take[Int, IO](10)
+  val largeTake = PL.take[Int, IO](1000000)
 
-  println(runPipe(printer).unsafePerformIO)
+
+  val smallPrint: Pipe[Zero, Zero, IO, Unit] = producer <+< smallTake <+< PL.printer[Stream, Int]
+
+  val largePrint: Pipe[Zero, Zero, IO, Unit] = producer <+< largeTake <+< PL.printer[Stream, Int]
+
+  println("start printing small pipeline")
+
+  println(runPipe(smallPrint).unsafePerformIO)
+
+  println("start printing large pipeline")
+
+  println(runPipe(largePrint).unsafePerformIO)
 }
 
