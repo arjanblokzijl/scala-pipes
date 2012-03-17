@@ -41,26 +41,16 @@ sealed trait Pipe[A, B, F[_], R] {
     through(this)
   }
 
-  def foldr[S](z: => Pipe[A, B, F, S])(f: (R, => Pipe[A, B, F, S]) => Pipe[A, B, F, S])(implicit F: Monad[F]): Pipe[A, B, F, S] = {
-    def go(xs: => Pipe[A, B, F, R], f: (R, => Pipe[A, B, F, S]) => Pipe[A, B, F, S]): Pipe[A, B, F, S] = xs.fold(
-      pure = r => f(r, z)
-      , mo = value => MO(F.map(value)(pi => go(pi, f)))
-      , await = fc => Await(a => go(fc.apply(a), f))
-      , yieldp = (b, p) => Yield(b, go(p, f))
-    )
-    go(this, f)
-  }
-
-   def >+>[C](that: Pipe[C, A, F, R])(implicit M: Monad[F]): Pipe[C, B, F, R] =
+   def <+<[C](that: Pipe[C, A, F, R])(implicit M: Monad[F]): Pipe[C, B, F, R] =
       (Lazy(this) compose Lazy(that)) unLazy
 
-    def <+<[C](that: Pipe[B, C, F, R])(implicit M: Monad[F]): Pipe[A, C, F, R] =
+    def >+>[C](that: Pipe[B, C, F, R])(implicit M: Monad[F]): Pipe[A, C, F, R] =
       (Lazy(that) compose Lazy(this)) unLazy
 
-   def >->[C](that: Pipe[C, A, F, R])(implicit M: Monad[F]): Pipe[C, B, F, R] =
+   def <-<[C](that: Pipe[C, A, F, R])(implicit M: Monad[F]): Pipe[C, B, F, R] =
       (Strict(this) compose Strict(that)) unStrict
 
-    def <-<[C](that: Pipe[B, C, F, R])(implicit M: Monad[F]): Pipe[A, C, F, R] =
+    def >->[C](that: Pipe[B, C, F, R])(implicit M: Monad[F]): Pipe[A, C, F, R] =
       (Strict(that) compose Strict(this)) unStrict
 }
 
@@ -164,12 +154,12 @@ trait PipeInstances {
 case class Lazy[F[_], R, A, B](unLazy: Pipe[A, B, F, R]) {
   def compose[C](that: Lazy[F, R, C, A])(implicit M: Monad[F]): Lazy[F, R, C, B] = {
     val p: Pipe[C, B, F, R] = (this.unLazy, that.unLazy) match {
-      case (Yield(x1, p1), p2) => yieldp(x1) flatMap (_ => p1 >+> p2)
-      case (MO(m1), p2) => pipeMonadTrans.liftM(m1) flatMap ((p1: Pipe[A, B, F, R]) => p1 >+> p2)
+      case (Yield(x1, p1), p2) => yieldp(x1) flatMap (_ => p1 <+< p2)
+      case (MO(m1), p2) => pipeMonadTrans.liftM(m1) flatMap ((p1: Pipe[A, B, F, R]) => p1 <+< p2)
       case (Pure(r1), _) => Pure(r1)
-      case (Await(f1), Yield(x2, p2)) => f1(x2) >+> p2
-      case (p1, Await(f2)) => pipes.await[C, B, F] flatMap (x => p1 >+> f2(x))
-      case (p1, MO(m2)) => pipeMonadTrans.liftM(m2) flatMap (p2 => p1 >+> p2)
+      case (Await(f1), Yield(x2, p2)) => f1(x2) <+< p2
+      case (p1, Await(f2)) => pipes.await[C, B, F] flatMap (x => p1 <+< f2(x))
+      case (p1, MO(m2)) => pipeMonadTrans.liftM(m2) flatMap (p2 => p1 <+< p2)
       case (_, Pure(r2)) => Pure(r2)
     }
     Lazy(p)
@@ -178,7 +168,7 @@ case class Lazy[F[_], R, A, B](unLazy: Pipe[A, B, F, R]) {
 
 case class Strict[F[_], R, A, B](unStrict: Pipe[A, B, F, R]) {
   def compose[C](that: Strict[F, R, C, A])(implicit M: Monad[F]): Strict[F, R, C, B] =
-    Strict((this.unStrict flatMap(_ => discard[A, B, F, R])) >+> that.unStrict)
+    Strict((this.unStrict flatMap(_ => discard[A, B, F, R])) <+< that.unStrict)
 }
 
 trait PipeFunctions {

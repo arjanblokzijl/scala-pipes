@@ -19,9 +19,9 @@ object PipeExamples extends App {
   val take5 = PL.take[Int, IO](5)
   val largeTake = PL.take[Int, IO](1000000)
 
-  val printer: Pipe[Zero, Zero, IO, Unit] = producer <+< take10 <+< PL.printer[Stream, Int]
+  val printer: Pipe[Zero, Zero, IO, Unit] =  PL.printer[Stream, Int] <+< take10 <+< producer
 
-  val largePrinter: Pipe[Zero, Zero, IO, Unit] = producer <+< largeTake <+< PL.printer[Stream, Int]
+  val largePrinter: Pipe[Zero, Zero, IO, Unit] = PL.printer[Stream, Int]  <+< largeTake <+< producer
 
   take10 flatMap (_ => take5)
 
