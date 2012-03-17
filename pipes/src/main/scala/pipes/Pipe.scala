@@ -2,18 +2,20 @@ package pipes
 
 import scalaz._
 import pipes._
-import annotation.tailrec
+import Pipe._
+
 /**
+ * A Pipe is a monad transformer with the ability to 'await' input from or 'yield' output to other Pipes.
+ * Pipes resemble enumeratees in the Iteratee libraries since they receive an input stream and transform it
+ * into a new stream.
+ * What distinguishes 'Pipe's from every other iteratee implementation is that
+ * they form a 'Category'.  Because of this, 'Pipe's can be composed into 'Pipeline's.
  *
  * @tparam A The type of input received from upstream pipes
  * @tparam B The type of output delivered to downstream pipes
  * @tparam F The base monad
  * @tparam R The type of the monad's final result
  */
-//import scalaz.Free._
-//import std.function._
-import Pipe._
-
 sealed trait Pipe[A, B, F[_], R] {
   def fold[Z](pure: (=> R) => Z
               , mo: (=> F[Pipe[A, B, F, R]]) => Z
@@ -45,8 +47,14 @@ sealed trait Pipe[A, B, F[_], R] {
    def >+>[C](that: Pipe[C, A, F, R])(implicit M: Monad[F]): Pipe[C, B, F, R] =
       (Lazy(this) compose Lazy(that)) unLazy
 
-   def <+<[C](that: Pipe[B, C, F, R])(implicit M: Monad[F]): Pipe[A, C, F, R] =
+    def <+<[C](that: Pipe[B, C, F, R])(implicit M: Monad[F]): Pipe[A, C, F, R] =
       (Lazy(that) compose Lazy(this)) unLazy
+
+   def >->[C](that: Pipe[C, A, F, R])(implicit M: Monad[F]): Pipe[C, B, F, R] =
+      (Strict(this) compose Strict(that)) unStrict
+
+    def <-<[C](that: Pipe[B, C, F, R])(implicit M: Monad[F]): Pipe[A, C, F, R] =
+      (Strict(that) compose Strict(this)) unStrict
 }
 
 object Pipe {
@@ -121,7 +129,26 @@ trait PipeInstances {
   }
 }
 
+/**
+ * A Category instance with lazy semantics, meaning each pipe consumes as little input as possible.
+ * The Pipe control flow rules for lazy composition are as follows:
+ *
+ * Execution begins at the most downstream 'Pipe'.
 
+ * $ - If a 'Pipe' 'await's input, it blocks and transfers control to the next
+ * 'Pipe' upstream until that 'Pipe' 'yield's back a value.
+ *
+ * $ - If a 'Pipe' 'yield's output, it restores control to the original
+ * downstream 'Pipe' that was 'await'ing its input and binds its result to
+ * the return value of the 'await' command.
+ *
+ * $- If a 'Pipe' terminates, it terminates every other 'Pipe' composed with it.
+ *
+ * The last rule follows from laziness.  If a 'Pipe' terminates then every
+ * downstream 'Pipe' depending on its output cannot proceed, and upstream
+ * 'Pipe's are never evaluated because the terminated 'Pipe' will not request values from them any longer.
+ *
+ */
 case class Lazy[F[_], R, A, B](unLazy: Pipe[A, B, F, R]) {
   def compose[C](that: Lazy[F, R, C, A])(implicit M: Monad[F]): Lazy[F, R, C, B] = {
     val p: Pipe[C, B, F, R] = (this.unLazy, that.unLazy) match {
@@ -137,7 +164,10 @@ case class Lazy[F[_], R, A, B](unLazy: Pipe[A, B, F, R]) {
   }
 }
 
-case class Strict[F[_], R, A, B](unStrict: Pipe[A, B, F, R])
+case class Strict[F[_], R, A, B](unStrict: Pipe[A, B, F, R]) {
+  def compose[C](that: Strict[F, R, C, A])(implicit M: Monad[F]): Strict[F, R, C, B] =
+    Strict((this.unStrict flatMap(_ => discard[A, B, F, R])) >+> that.unStrict)
+}
 
 trait PipeFunctions {
   sealed trait Zero
