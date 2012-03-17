@@ -16,8 +16,7 @@ import Pipe._
  * the Trace data type from \"A Language Based Approach to Unifying Events and
  * Threads\".
  *
- * @see [[http://www.soi.city.ac.uk/~ross/papers/FingerTree.pdf Finger trees: a simple general-purpose data structure]]
- * @see [[http://apfelmus.nfshost.com/articles/monoid-fingertree.html]]
+ * @see [[http://themonadreader.files.wordpress.com/2011/10/issue19.pdf]]
  *
  * @tparam A The type of input received from upstream pipes
  * @tparam B The type of output delivered to downstream pipes
