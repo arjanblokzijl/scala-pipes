@@ -11,25 +11,27 @@ import scalaz.std.stream._
  */
 
 object PipeExamples extends App {
-
   val str = Stream.from(1)
 
   val producer = PL.fromStream[Int, IO](str)
 
-  val smallTake = PL.take[Int, IO](10)
+  val take10 = PL.take[Int, IO](10)
+  val take5 = PL.take[Int, IO](5)
   val largeTake = PL.take[Int, IO](1000000)
 
+  val printer: Pipe[Zero, Zero, IO, Unit] = producer <+< take10 <+< PL.printer[Stream, Int]
 
-  val smallPrint: Pipe[Zero, Zero, IO, Unit] = producer <+< smallTake <+< PL.printer[Stream, Int]
+  val largePrinter: Pipe[Zero, Zero, IO, Unit] = producer <+< largeTake <+< PL.printer[Stream, Int]
 
-  val largePrint: Pipe[Zero, Zero, IO, Unit] = producer <+< largeTake <+< PL.printer[Stream, Int]
+  take10 flatMap (_ => take5)
 
-  println("start printing small pipeline")
+  println("printing")
+  println(runPipe(printer).unsafePerformIO)
 
-  println(runPipe(smallPrint).unsafePerformIO)
+  println("composing pipelines ")
+  println(runPipe(printer flatMap (_ => printer)).unsafePerformIO)
 
-  println("start printing large pipeline")
-
-  println(runPipe(largePrint).unsafePerformIO)
+  println("large pipeline")
+  println(runPipe(largePrinter).unsafePerformIO)
 }
 

@@ -11,6 +11,14 @@ import Pipe._
  * What distinguishes 'Pipe's from every other iteratee implementation is that
  * they form a 'Category'.  Because of this, 'Pipe's can be composed into 'Pipeline's.
  *
+ * The Pipe type is partly inspired by Mario Blazevic's Coroutine in his
+ * concurrency article from Issue 19 of The Monad Reader and partly inspired by
+ * the Trace data type from \"A Language Based Approach to Unifying Events and
+ * Threads\".
+ *
+ * @see [[http://www.soi.city.ac.uk/~ross/papers/FingerTree.pdf Finger trees: a simple general-purpose data structure]]
+ * @see [[http://apfelmus.nfshost.com/articles/monoid-fingertree.html]]
+ *
  * @tparam A The type of input received from upstream pipes
  * @tparam B The type of output delivered to downstream pipes
  * @tparam F The base monad
@@ -126,6 +134,11 @@ trait PipeInstances {
   implicit def pipeCategory[F[_], R](implicit M: Monad[F]): Category[({type l[a, b] = Lazy[F, R, a, b]})#l] = new Category[({type l[a, b] = Lazy[F, R, a, b]})#l] {
     def compose[A, B, C](f: Lazy[F, R, B, C], g: Lazy[F, R, A, B]): Lazy[F, R, A, C] = f compose g
     def id[A]: Lazy[F, R, A, A] = Lazy(pipes.idP)
+  }
+
+  implicit def strictPipeCategory[F[_], R](implicit M: Monad[F]): Category[({type l[a, b] = Strict[F, R, a, b]})#l] = new Category[({type l[a, b] = Strict[F, R, a, b]})#l] {
+    def compose[A, B, C](f: Strict[F, R, B, C], g: Strict[F, R, A, B]): Strict[F, R, A, C] = f compose g
+    def id[A]: Strict[F, R, A, A] = Strict(pipes.idP)
   }
 }
 
